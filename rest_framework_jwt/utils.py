@@ -13,7 +13,7 @@ def jwt_get_decoded_user_password(user):
     key = sha256(password).hexdigest()
     return key
 
-def jwt_refresh_payload_handler(token, user):
+def jwt_refresh_payload_handler(user):
     """
     Used to generate long-term refresh token
     """

@@ -78,7 +78,6 @@ class VerificationBaseSerializer(Serializer):
     """
     Abstract serializer used for verifying and refreshing JWTs.
     """
-    token = serializers.CharField()
 
     def validate(self, attrs):
         msg = 'Please define a validate method.'
@@ -128,6 +127,7 @@ class VerifyJSONWebTokenSerializer(VerificationBaseSerializer):
     """
     Check the veracity of an access token.
     """
+    token = serializers.CharField()
 
     def validate(self, attrs):
         token = attrs['token']
@@ -145,6 +145,7 @@ class RefreshJSONWebTokenSerializer(VerificationBaseSerializer):
     """
     Refresh an access token.
     """
+    refresh_token = serializers.CharField()
 
     def validate(self, attrs):
         if not api_settings.JWT_ALLOW_REFRESH:

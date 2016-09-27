@@ -14,10 +14,12 @@ from rest_framework_jwt.compat import get_username_field, PasswordField
 
 User = get_user_model()
 jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
+jwt_refresh_payload_handler = api_settings.JWT_REFRESH_PAYLOAD_HANDLER
 jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
 jwt_decode_handler = api_settings.JWT_DECODE_HANDLER
 jwt_get_username_from_payload = api_settings.JWT_PAYLOAD_GET_USERNAME_HANDLER
-
+jwt_get_decoded_user_password = api_settings.JWT_PAYLOAD_GET_DECODED_USER_PASSWORD
+jwt_get_password_from_payload = api_settings.JWT_PAYLOAD_GET_USER_PASSWORD_HANDLER
 
 class JSONWebTokenSerializer(Serializer):
     """
@@ -55,11 +57,14 @@ class JSONWebTokenSerializer(Serializer):
                     raise serializers.ValidationError(msg)
 
                 payload = jwt_payload_handler(user)
-
-                return {
+                resp = {
                     'token': jwt_encode_handler(payload),
                     'user': user
                 }
+                if api_settings.JWT_ALLOW_REFRESH:
+                    refresh_payload = jwt_refresh_payload_handler(user)
+                    resp['refresh_token'] = jwt_encode_handler(refresh_payload)
+                return resp
             else:
                 msg = _('Unable to login with provided credentials.')
                 raise serializers.ValidationError(msg)
@@ -93,9 +98,8 @@ class VerificationBaseSerializer(Serializer):
 
         return payload
 
-    def _check_user(self, payload):
+    def _check_user(self, payload, validate_password=False):
         username = jwt_get_username_from_payload(payload)
-
         if not username:
             msg = _('Invalid payload.')
             raise serializers.ValidationError(msg)
@@ -110,8 +114,14 @@ class VerificationBaseSerializer(Serializer):
         if not user.is_active:
             msg = _('User account is disabled.')
             raise serializers.ValidationError(msg)
-
+        if validate_password:
+            key = jwt_get_password_from_payload(payload)
+            valid_key = jwt_get_decoded_user_password(user)
+            if key != valid_key:
+                msg = _('Token has expired')
+                raise serializers.ValidationError(msg)
         return user
+
 
 
 class VerifyJSONWebTokenSerializer(VerificationBaseSerializer):
@@ -137,33 +147,14 @@ class RefreshJSONWebTokenSerializer(VerificationBaseSerializer):
     """
 
     def validate(self, attrs):
-        token = attrs['token']
-
-        payload = self._check_payload(token=token)
-        user = self._check_user(payload=payload)
-        # Get and check 'orig_iat'
-        orig_iat = payload.get('orig_iat')
-
-        if orig_iat:
-            # Verify expiration
-            refresh_limit = api_settings.JWT_REFRESH_EXPIRATION_DELTA
-
-            if isinstance(refresh_limit, timedelta):
-                refresh_limit = (refresh_limit.days * 24 * 3600 +
-                                 refresh_limit.seconds)
-
-            expiration_timestamp = orig_iat + int(refresh_limit)
-            now_timestamp = timegm(datetime.utcnow().utctimetuple())
-
-            if now_timestamp > expiration_timestamp:
-                msg = _('Refresh has expired.')
-                raise serializers.ValidationError(msg)
-        else:
-            msg = _('orig_iat field is required.')
+        if not api_settings.JWT_ALLOW_REFRESH:
+            msg = _('Refresh is not allowed')
             raise serializers.ValidationError(msg)
 
+        token = attrs['refresh_token']
+        payload = self._check_payload(token=token)
+        user = self._check_user(payload=payload, validate_password=True)
         new_payload = jwt_payload_handler(user)
-        new_payload['orig_iat'] = orig_iat
 
         return {
             'token': jwt_encode_handler(new_payload),

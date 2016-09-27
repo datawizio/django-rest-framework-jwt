@@ -3,9 +3,42 @@ import uuid
 import warnings
 from calendar import timegm
 from datetime import datetime
-
+from hashlib import sha256
 from rest_framework_jwt.compat import get_username, get_username_field
 from rest_framework_jwt.settings import api_settings
+
+
+def jwt_get_decoded_user_password(user):
+    password = getattr(user, api_settings.JWT_AUTH_USER_PASSWORD_FIELD)
+    key = sha256(password).hexdigest()
+    return key
+
+def jwt_refresh_payload_handler(token, user):
+    """
+    Used to generate long-term refresh token
+    """
+    username_field = get_username_field()
+    username = get_username(user)
+    key = jwt_get_decoded_user_password(user)
+
+    #We added "key" param to verify, that user password not changed
+    payload = {
+               "exp": datetime.utcnow() + api_settings.JWT_REFRESH_EXPIRATION_DELTA,
+               'user_id': user.pk,
+               'email': user.email,
+               'username': username,
+               'key': key
+               }
+    if isinstance(user.pk, uuid.UUID):
+        payload['user_id'] = str(user.pk)
+    payload[username_field] = username
+    if api_settings.JWT_AUDIENCE is not None:
+        payload['aud'] = api_settings.JWT_AUDIENCE
+
+    if api_settings.JWT_ISSUER is not None:
+        payload['iss'] = api_settings.JWT_ISSUER
+    return payload
+
 
 
 def jwt_payload_handler(user):
@@ -31,10 +64,10 @@ def jwt_payload_handler(user):
 
     # Include original issued at time for a brand new token,
     # to allow token refresh
-    if api_settings.JWT_ALLOW_REFRESH:
-        payload['orig_iat'] = timegm(
-            datetime.utcnow().utctimetuple()
-        )
+    # if api_settings.JWT_ALLOW_REFRESH:
+    #     payload['orig_iat'] = timegm(
+    #         datetime.utcnow().utctimetuple()
+    #     )
 
     if api_settings.JWT_AUDIENCE is not None:
         payload['aud'] = api_settings.JWT_AUDIENCE
@@ -64,6 +97,8 @@ def jwt_get_username_from_payload_handler(payload):
     """
     return payload.get('username')
 
+def jwt_get_user_password_from_payload_handler(payload):
+    return payload.get('key')
 
 def jwt_encode_handler(payload):
     return jwt.encode(
@@ -90,7 +125,7 @@ def jwt_decode_handler(token):
     )
 
 
-def jwt_response_payload_handler(token, user=None, request=None):
+def jwt_response_payload_handler(token, user=None, request=None, **kwargs):
     """
     Returns the response data for both the login and refresh views.
     Override to return a custom response such as including the
@@ -105,6 +140,5 @@ def jwt_response_payload_handler(token, user=None, request=None):
         }
 
     """
-    return {
-        'token': token
-    }
+    kwargs['token'] = token
+    return kwargs

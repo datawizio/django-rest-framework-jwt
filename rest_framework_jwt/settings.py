@@ -16,8 +16,17 @@ DEFAULTS = {
     'JWT_PAYLOAD_HANDLER':
     'rest_framework_jwt.utils.jwt_payload_handler',
 
+    'JWT_REFRESH_PAYLOAD_HANDLER':
+    'rest_framework_jwt.utils.jwt_refresh_payload_handler',
+
     'JWT_PAYLOAD_GET_USER_ID_HANDLER':
     'rest_framework_jwt.utils.jwt_get_user_id_from_payload_handler',
+
+    'JWT_PAYLOAD_GET_USER_PASSWORD_HANDLER':
+    'rest_framework_jwt.utils.jwt_get_user_password_from_payload_handler',
+
+    'JWT_PAYLOAD_GET_DECODED_USER_PASSWORD':
+    'rest_framework_jwt.utils.jwt_get_decoded_user_password',
 
     'JWT_PRIVATE_KEY':
     None,
@@ -42,7 +51,7 @@ DEFAULTS = {
 
     'JWT_ALLOW_REFRESH': True,
     'JWT_REFRESH_EXPIRATION_DELTA': datetime.timedelta(days=7),
-
+    'JWT_AUTH_USER_PASSWORD_FIELD': 'password',
     'JWT_AUTH_HEADER_PREFIX': 'JWT',
 }
 

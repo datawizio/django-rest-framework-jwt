@@ -56,7 +56,11 @@ class JSONWebTokenAPIView(APIView):
         if serializer.is_valid():
             user = serializer.object.get('user') or request.user
             token = serializer.object.get('token')
-            response_data = jwt_response_payload_handler(token, user, request)
+            refresh_token = serializer.object.get('refresh_token')
+            if refresh_token is None:
+                response_data = jwt_response_payload_handler(token, user, request)
+            else:
+                response_data = jwt_response_payload_handler(token, user, request, refresh_token=refresh_token)
 
             return Response(response_data)
 

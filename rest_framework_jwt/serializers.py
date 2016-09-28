@@ -127,7 +127,7 @@ class VerifyJSONWebTokenSerializer(VerificationBaseSerializer):
     """
     Check the veracity of an access token.
     """
-    token = serializers.CharField()
+    token = serializers.CharField(allow_blank=True)
 
     def validate(self, attrs):
         token = attrs['token']
@@ -145,7 +145,7 @@ class RefreshJSONWebTokenSerializer(VerificationBaseSerializer):
     """
     Refresh an access token.
     """
-    refresh_token = serializers.CharField()
+    refresh_token = serializers.CharField(allow_blank=True)
 
     def validate(self, attrs):
         if not api_settings.JWT_ALLOW_REFRESH:

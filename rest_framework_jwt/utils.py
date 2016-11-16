@@ -27,7 +27,8 @@ def jwt_refresh_payload_handler(user):
                'user_id': user.pk,
                'email': user.email,
                'username': username,
-               'key': key
+               'key': key,
+               'type': api_settings.JWT_REFRESH_KEYWORD
                }
     if isinstance(user.pk, uuid.UUID):
         payload['user_id'] = str(user.pk)
@@ -55,7 +56,8 @@ def jwt_payload_handler(user):
         'user_id': user.pk,
         'email': user.email,
         'username': username,
-        'exp': datetime.utcnow() + api_settings.JWT_EXPIRATION_DELTA
+        'exp': datetime.utcnow() + api_settings.JWT_EXPIRATION_DELTA,
+        'type': api_settings.JWT_TOKEN_KEYWORD
     }
     if isinstance(user.pk, uuid.UUID):
         payload['user_id'] = str(user.pk)

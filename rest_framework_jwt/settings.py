@@ -48,9 +48,11 @@ DEFAULTS = {
     'JWT_EXPIRATION_DELTA': datetime.timedelta(seconds=300),
     'JWT_AUDIENCE': None,
     'JWT_ISSUER': None,
+    'JWT_TOKEN_KEYWORD': 'access',
 
     'JWT_ALLOW_REFRESH': True,
     'JWT_REFRESH_EXPIRATION_DELTA': datetime.timedelta(days=7),
+    'JWT_REFRESH_KEYWORD': 'refresh',
     'JWT_AUTH_USER_PASSWORD_FIELD': 'password',
     'JWT_AUTH_HEADER_PREFIX': 'JWT',
 }

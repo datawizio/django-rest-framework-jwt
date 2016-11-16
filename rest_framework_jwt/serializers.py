@@ -131,9 +131,10 @@ class VerifyJSONWebTokenSerializer(VerificationBaseSerializer):
 
     def validate(self, attrs):
         token = attrs['token']
-
         payload = self._check_payload(token=token)
-        user = self._check_user(payload=payload)
+        # validate password only when refresh token received
+        validate_password = payload.get("type", api_settings.JWT_TOKEN_KEYWORD) == api_settings.JWT_REFRESH_KEYWORD
+        user = self._check_user(payload=payload, validate_password=validate_password)
 
         return {
             'token': token,

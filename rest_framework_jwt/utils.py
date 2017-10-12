@@ -6,11 +6,14 @@ from datetime import datetime
 from hashlib import sha256
 from rest_framework_jwt.compat import get_username, get_username_field
 from rest_framework_jwt.settings import api_settings
-
+import six
 
 def jwt_get_decoded_user_password(user):
     password = getattr(user, api_settings.JWT_AUTH_USER_PASSWORD_FIELD)
-    key = sha256(password).hexdigest()
+    if six.PY2:
+        key = sha256(password).hexdigest()
+    else:
+        key = sha256(password.encode()).hexdigest()
     return key
 
 def jwt_refresh_payload_handler(user):

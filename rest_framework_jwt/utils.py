@@ -7,8 +7,6 @@ from hashlib import sha256
 from rest_framework_jwt.compat import get_username, get_username_field
 from rest_framework_jwt.settings import api_settings
 import six
-from django.contrib.auth.models import User
-
 
 def jwt_get_decoded_user_password(user):
     password = getattr(user, api_settings.JWT_AUTH_USER_PASSWORD_FIELD)
@@ -27,7 +25,8 @@ def jwt_refresh_payload_handler(user):
         'token_type': api_settings.JWT_REFRESH_KEYWORD,
         "exp": datetime.utcnow() + api_settings.JWT_REFRESH_EXPIRATION_DELTA,
         'jti': jwt_get_decoded_user_password(user),
-        'user_id': user.pk
+        'user_id': user.pk,
+        'username': get_username(user)
                }
     if isinstance(user.pk, uuid.UUID):
         payload['user_id'] = str(user.pk)
@@ -44,7 +43,8 @@ def jwt_payload_handler(user):
         'user_id': user.pk,
         'jti': uuid.uuid4().hex,
         'exp': datetime.utcnow() + api_settings.JWT_EXPIRATION_DELTA,
-        'token_type': api_settings.JWT_TOKEN_KEYWORD
+        'token_type': api_settings.JWT_TOKEN_KEYWORD,
+        'username': get_username(user)
     }
     if isinstance(user.pk, uuid.UUID):
         payload['user_id'] = str(user.pk)
@@ -82,7 +82,7 @@ def jwt_get_username_from_payload_handler(payload):
     """
     Override this function if username is formatted differently in payload
     """
-    return User.objects.get(id=payload.get('user_id')).username
+    return payload.get('username')
 
 def jwt_get_user_password_from_payload_handler(payload):
     return payload.get('jti')

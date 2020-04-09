@@ -7,6 +7,8 @@ from hashlib import sha256
 from rest_framework_jwt.compat import get_username, get_username_field
 from rest_framework_jwt.settings import api_settings
 import six
+from django.contrib.auth.models import User
+
 
 def jwt_get_decoded_user_password(user):
     password = getattr(user, api_settings.JWT_AUTH_USER_PASSWORD_FIELD)
@@ -20,22 +22,15 @@ def jwt_refresh_payload_handler(user):
     """
     Used to generate long-term refresh token
     """
-    username_field = get_username_field()
-    username = get_username(user)
-    key = jwt_get_decoded_user_password(user)
-
     #We added "key" param to verify, that user password not changed
     payload = {
-               "exp": datetime.utcnow() + api_settings.JWT_REFRESH_EXPIRATION_DELTA,
-               'user_id': user.pk,
-               'email': user.email,
-               'username': username,
-               'key': key,
-               'type': api_settings.JWT_REFRESH_KEYWORD
+        'token_type': api_settings.JWT_REFRESH_KEYWORD,
+        "exp": datetime.utcnow() + api_settings.JWT_REFRESH_EXPIRATION_DELTA,
+        'jti': jwt_get_decoded_user_password(user),
+        'user_id': user.pk
                }
     if isinstance(user.pk, uuid.UUID):
         payload['user_id'] = str(user.pk)
-    payload[username_field] = username
     if api_settings.JWT_AUDIENCE is not None:
         payload['aud'] = api_settings.JWT_AUDIENCE
 
@@ -44,28 +39,15 @@ def jwt_refresh_payload_handler(user):
     return payload
 
 
-
 def jwt_payload_handler(user):
-    username_field = get_username_field()
-    username = get_username(user)
-
-    warnings.warn(
-        'The following fields will be removed in the future: '
-        '`email` and `user_id`. ',
-        DeprecationWarning
-    )
-
     payload = {
         'user_id': user.pk,
-        'email': user.email,
-        'username': username,
+        'jti': uuid.uuid4().hex,
         'exp': datetime.utcnow() + api_settings.JWT_EXPIRATION_DELTA,
-        'type': api_settings.JWT_TOKEN_KEYWORD
+        'token_type': api_settings.JWT_TOKEN_KEYWORD
     }
     if isinstance(user.pk, uuid.UUID):
         payload['user_id'] = str(user.pk)
-
-    payload[username_field] = username
 
     # Include original issued at time for a brand new token,
     # to allow token refresh
@@ -100,10 +82,10 @@ def jwt_get_username_from_payload_handler(payload):
     """
     Override this function if username is formatted differently in payload
     """
-    return payload.get('username')
+    return User.objects.get(id=payload.get('user_id')).username
 
 def jwt_get_user_password_from_payload_handler(payload):
-    return payload.get('key')
+    return payload.get('jti')
 
 def jwt_encode_handler(payload):
     return jwt.encode(
